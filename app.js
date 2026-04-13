@@ -554,6 +554,14 @@ function timeAgo(dateStr) {
   return formatDate(dateStr);
 }
 
+function slugify(text) {
+    return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+}
+
+function getArticleBySlug(slug) {
+    return articles.find(a => slugify(a.title) === slug);
+}
+
 // --- State ---
 let shuffledArticles = shuffleArray(articles);
 let displayedCount = 0;
@@ -610,7 +618,7 @@ function renderFeatured(arts) {
     <div class="featured-side-item">
       <img class="side-img" src="${picsum(a.imageId, 600, 380)}" alt="" loading="lazy">
       <div class="side-category">${a.category}</div>
-      <h3 class="side-title"><a href="#article-${a.id}" onclick="openArticle(${a.id});return false;">${a.title}</a></h3>
+      <h3 class="side-title"><a href="/${slugify(a.title)}" onclick="openArticle(${a.id});return false;">${a.title}</a></h3>
       <div class="side-byline">By ${a.author} &middot; ${timeAgo(a.date)}</div>
     </div>
   `).join('');
@@ -619,7 +627,7 @@ function renderFeatured(arts) {
     <div class="featured-main">
       <img class="featured-img" src="${picsum(main.imageId, 900, 506)}" alt="" loading="lazy">
       <div class="featured-category">${main.category}</div>
-      <h2 class="featured-title"><a href="#article-${main.id}" onclick="openArticle(${main.id});return false;">${main.title}</a></h2>
+      <h2 class="featured-title"><a href="/${slugify(main.title)}" onclick="openArticle(${main.id});return false;">${main.title}</a></h2>
       <p class="featured-summary">${main.summary}</p>
       <div class="featured-byline">By ${main.author} &middot; ${formatDate(main.date)}</div>
     </div>
@@ -632,7 +640,7 @@ function renderArticleCard(a) {
     <div class="article-card">
       <img class="card-img" src="${picsum(a.imageId, 600, 380)}" alt="" loading="lazy">
       <div class="card-category">${a.category}</div>
-      <h3 class="card-title"><a href="#article-${a.id}" onclick="openArticle(${a.id});return false;">${a.title}</a></h3>
+      <h3 class="card-title"><a href="/${slugify(a.title)}" onclick="openArticle(${a.id});return false;">${a.title}</a></h3>
       <p class="card-summary">${a.summary}</p>
       <div class="card-byline">By ${a.author} &middot; ${timeAgo(a.date)}</div>
     </div>
@@ -653,7 +661,7 @@ function renderSidebar() {
     <li>
       <div class="sidebar-item-content">
         <div class="sidebar-item-category">${a.category}</div>
-        <div class="sidebar-item-title"><a href="#article-${a.id}" onclick="openArticle(${a.id});return false;">${a.title}</a></div>
+        <div class="sidebar-item-title"><a href="/${slugify(a.title)}" onclick="openArticle(${a.id});return false;">${a.title}</a></div>
       </div>
     </li>
   `).join('');
@@ -662,7 +670,7 @@ function renderSidebar() {
     <li>
       <div class="sidebar-item-content">
         <div class="sidebar-item-category">${a.category}</div>
-        <div class="sidebar-item-title"><a href="#article-${a.id}" onclick="openArticle(${a.id});return false;">${a.title}</a></div>
+        <div class="sidebar-item-title"><a href="/${slugify(a.title)}" onclick="openArticle(${a.id});return false;">${a.title}</a></div>
       </div>
     </li>
   `).join('');
@@ -761,7 +769,7 @@ function openArticle(id) {
   articleView.style.display = '';
   renderArticleFull(a);
   window.scrollTo({ top: 0, behavior: 'smooth' });
-  history.pushState(null, '', `#article-${id}`);
+  history.pushState(null, '', '/' + slugify(a.title));
 }
 
 function navigateHome(e) {
@@ -772,7 +780,7 @@ function navigateHome(e) {
   updateActiveNav('all');
   shuffledArticles = shuffleArray(articles);
   renderHomepage();
-  history.pushState(null, '', window.location.pathname);
+  history.pushState(null, '', '/');
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -824,31 +832,25 @@ mobileMenuBtn.addEventListener('click', () => {
   navList.classList.toggle('open');
 });
 
-// --- Hash Routing ---
-function handleHash() {
-  const hash = window.location.hash;
-  if (hash.startsWith('#article-')) {
-    const id = parseInt(hash.replace('#article-', ''), 10);
-    if (id) {
-      openArticle(id);
+// --- Path Routing ---
+function handleRoute() {
+  const path = window.location.pathname;
+  if (path && path !== '/') {
+    const slug = path.replace(/^\//, '');
+    const article = getArticleBySlug(slug);
+    if (article) {
+      openArticle(article.id);
       return;
     }
   }
+  homepageView.style.display = '';
+  articleView.style.display = 'none';
   renderHomepage();
 }
 
-window.addEventListener('hashchange', handleHash);
-window.addEventListener('popstate', () => {
-  if (!window.location.hash) {
-    renderHomepage();
-    homepageView.style.display = '';
-    articleView.style.display = 'none';
-  } else {
-    handleHash();
-  }
-});
+window.addEventListener('popstate', handleRoute);
 
 // --- Init ---
 renderMasthead();
 renderTicker();
-handleHash();
+handleRoute();
